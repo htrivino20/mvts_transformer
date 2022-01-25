@@ -9,7 +9,7 @@ ArXiV version: https://arxiv.org/abs/2010.02803
 2. `cd mvts_transformer/`
 3. Inside an already *existing* root directory, each experiment will create a time-stamped output directory, which contains model checkpoints, performance metrics per epoch, predictions per sample, the experiment configuration, log files etc. The following commands assume that you have created a new root directory inside the project directory like this: `mkdir experiments`
 4. [We recommend creating and activating a `conda` or other Python virtual environment (e.g. `virtualenv`) to install packages and avoid conficting package requirements; otherwise, to run `pip`, the flag `--user` or `sudo` privileges will be necessary.] `pip install -r requirements.txt`
-5. To see all command options with explanations, run: python `src/main.py --help`
+5. To see all command options with explanations, run: `python src/main.py --help`
 
 ## Train models from scratch
 ### Classification
