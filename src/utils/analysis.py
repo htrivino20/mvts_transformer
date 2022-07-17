@@ -14,6 +14,7 @@ import math
 import logging
 from datetime import datetime
 
+logger = logging.getLogger('__main__')
 
 def acc_top_k(predictions, y_true):
     """Accuracy when allowing for correct class being in the top k predictions.
@@ -194,13 +195,13 @@ def print_confusion_matrix(ConfMat, label_strings=None, title='Confusion matrix'
     if label_strings is None:
         label_strings = ConfMat.shape[0] * ['']
 
-    print(title)
-    print(len(title) * '-')
+    logger.info(title)
+    logger.info(len(title) * '-')
     # Make printable matrix:
     print_mat = []
     for i, row in enumerate(ConfMat):
         print_mat.append([label_strings[i]] + list(row))
-    print(tabulate(print_mat, headers=['True\Pred'] + label_strings, tablefmt='orgtbl'))
+    logger.info(tabulate(print_mat, headers=['True\Pred'] + label_strings, tablefmt='orgtbl'))
 
 
 class Analyzer(object):
