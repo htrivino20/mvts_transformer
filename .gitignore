@@ -1,0 +1,41 @@
+LevelsWindTurbines/
+*.xls
+*.ts
+Emotiv/
+output/
+WindTurbinesSensors/
+SpokenArabicDigits/
+experiments/
+# Env and package
+venv/
+.env
+.vscode
+*.whl
+build
+*.egg-info
+
+# Dataset
+*.npz
+
+# Models
+*.pth
+*.pickle
+
+# Compiled python
+*.pyc
+
+# Jupyter
+*.ipynb
+.ipynb_checkpoints
+
+# Doc
+_build
+
+# Figures
+*.png
+*.jpg
+
+# Logs
+logs
+
+.idea
