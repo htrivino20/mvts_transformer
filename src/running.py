@@ -120,7 +120,7 @@ def fold_evaluate(dataset, model, device, loss_module, target_feats, config, dat
         evaluator = UnsupervisedRunner(model, loader, device, loss_module,
                                        print_interval=config['print_interval'], console=config['console'])
 
-        logger.info("Evaluating {} set, fold: {}, target features: {}".format(dataset_name, i, tgt_feats))
+        # logger.info("Evaluating {} set, fold: {}, target features: {}".format(dataset_name, i, tgt_feats))
         aggr_metrics, per_batch = evaluate(evaluator)
 
         metrics_array = convert_metrics_per_batch_to_per_sample(per_batch['metrics'], per_batch['target_masks'])
@@ -188,7 +188,7 @@ def validate(val_evaluator, tensorboard_writer, config, best_metrics, best_value
     logger.info("Evaluating on validation set ...")
     eval_start_time = time.time()
     with torch.no_grad():
-        aggr_metrics, per_batch = val_evaluator.evaluate(epoch, keep_all=True)
+        aggr_metrics, per_batch = val_evaluator.evaluate(epoch_num=epoch, keep_all=True, custom_title="validation")
     eval_runtime = time.time() - eval_start_time
     logger.info("Validation runtime: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(eval_runtime)))
 
@@ -251,7 +251,7 @@ class BaseRunner(object):
     def train_epoch(self, epoch_num=None):
         raise NotImplementedError('Please override in child class')
 
-    def evaluate(self, epoch_num=None, keep_all=True):
+    def evaluate(self, epoch_num=None, keep_all=True, custom_title=""):
         raise NotImplementedError('Please override in child class')
 
     def print_callback(self, i_batch, metrics, prefix=''):
@@ -266,7 +266,7 @@ class BaseRunner(object):
 
         dyn_string = template.format(*content)
         dyn_string = prefix + dyn_string
-        self.printer.print(dyn_string)
+        # self.printer.print(dyn_string)
 
 
 class UnsupervisedRunner(BaseRunner):
@@ -308,7 +308,7 @@ class UnsupervisedRunner(BaseRunner):
             metrics = {"loss": mean_loss.item()}
             if i % self.print_interval == 0:
                 ending = "" if epoch_num is None else 'Epoch {} '.format(epoch_num)
-                self.print_callback(i, metrics, prefix='Training ' + ending)
+                # self.print_callback(i, metrics, prefix='Training ' + ending)
 
             with torch.no_grad():
                 total_active_elements += len(loss)
@@ -319,7 +319,8 @@ class UnsupervisedRunner(BaseRunner):
         self.epoch_metrics['loss'] = epoch_loss
         return self.epoch_metrics
 
-    def evaluate(self, epoch_num=None, keep_all=True):
+    def evaluate(self, epoch_num=None, keep_all=True, custom_title= ""):
+        logger.info("Metrics info on {} set".format(custom_title))
 
         self.model = self.model.eval()
 
@@ -359,9 +360,9 @@ class UnsupervisedRunner(BaseRunner):
                 per_batch['IDs'].append(IDs)
 
             metrics = {"loss": mean_loss}
-            if i % self.print_interval == 0:
-                ending = "" if epoch_num is None else 'Epoch {} '.format(epoch_num)
-                self.print_callback(i, metrics, prefix='Evaluating ' + ending)
+            # if i % self.print_interval == 0:
+            #     ending = "" if epoch_num is None else 'Epoch {} '.format(epoch_num)
+            #     self.print_callback(i, metrics, prefix='Evaluating ' + ending)
 
             total_active_elements += len(loss)
             epoch_loss += batch_loss  # add total loss of batch
@@ -423,7 +424,7 @@ class SupervisedRunner(BaseRunner):
             metrics = {"loss": mean_loss.item()}
             if i % self.print_interval == 0:
                 ending = "" if epoch_num is None else 'Epoch {} '.format(epoch_num)
-                self.print_callback(i, metrics, prefix='Training ' + ending)
+                # self.print_callback(i, metrics, prefix='Training ' + ending)
 
             with torch.no_grad():
                 total_samples += len(loss)
@@ -434,7 +435,8 @@ class SupervisedRunner(BaseRunner):
         self.epoch_metrics['loss'] = epoch_loss
         return self.epoch_metrics
 
-    def evaluate(self, epoch_num=None, keep_all=True):
+    def evaluate(self, epoch_num=None, keep_all=True, custom_title=""):
+        logger.info("Metrics info on {} set".format(custom_title))
 
         self.model = self.model.eval()
 
@@ -455,14 +457,14 @@ class SupervisedRunner(BaseRunner):
             mean_loss = batch_loss / len(loss)  # mean loss (over samples)
 
             per_batch['targets'].append(targets.cpu().numpy())
-            per_batch['predictions'].append(predictions.cpu().numpy())
-            per_batch['metrics'].append([loss.cpu().numpy()])
+            per_batch['predictions'].append(predictions.detach().numpy())
+            per_batch['metrics'].append([loss.detach().numpy()])
             per_batch['IDs'].append(IDs)
 
             metrics = {"loss": mean_loss}
-            if i % self.print_interval == 0:
-                ending = "" if epoch_num is None else 'Epoch {} '.format(epoch_num)
-                self.print_callback(i, metrics, prefix='Evaluating ' + ending)
+            # if i % self.print_interval == 0:
+            #     ending = "" if epoch_num is None else 'Epoch {} '.format(epoch_num)
+            #     self.print_callback(i, metrics, prefix='Evaluating ' + ending)
 
             total_samples += len(loss)
             epoch_loss += batch_loss  # add total loss of batch

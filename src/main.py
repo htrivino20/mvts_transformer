@@ -34,6 +34,9 @@ from models.ts_transformer import model_factory
 from models.loss import get_loss_module
 from optimizers import get_optimizer
 
+import warnings
+
+warnings.filterwarnings("ignore")
 
 def main(config):
 
@@ -181,24 +184,18 @@ def main(config):
 
     loss_module = get_loss_module(config)
 
-    if config['test_only'] == 'testset':  # Only evaluate and skip training
-        dataset_class, collate_fn, runner_class = pipeline_factory(config)
-        test_dataset = dataset_class(test_data, test_indices)
+    # if config['test_only'] == 'testset':  # Only evaluate and skip training
+    dataset_class, collate_fn, runner_class = pipeline_factory(config)
+    test_dataset = dataset_class(test_data, test_indices)
 
-        test_loader = DataLoader(dataset=test_dataset,
-                                 batch_size=config['batch_size'],
-                                 shuffle=False,
-                                 num_workers=config['num_workers'],
-                                 pin_memory=True,
-                                 collate_fn=lambda x: collate_fn(x, max_len=model.max_len))
-        test_evaluator = runner_class(model, test_loader, device, loss_module,
-                                            print_interval=config['print_interval'], console=config['console'])
-        aggr_metrics_test, per_batch_test = test_evaluator.evaluate(keep_all=True)
-        print_str = 'Test Summary: '
-        for k, v in aggr_metrics_test.items():
-            print_str += '{}: {:8f} | '.format(k, v)
-        logger.info(print_str)
-        return
+    test_loader = DataLoader(dataset=test_dataset,
+                             batch_size=config['batch_size'],
+                             shuffle=False,
+                             num_workers=config['num_workers'],
+                             pin_memory=True,
+                             collate_fn=lambda x: collate_fn(x, max_len=model.max_len))
+    test_evaluator = runner_class(model, test_loader, device, loss_module,
+                                        print_interval=config['print_interval'], console=config['console'])
     
     # Initialize data generators
     dataset_class, collate_fn, runner_class = pipeline_factory(config)
@@ -230,6 +227,7 @@ def main(config):
     best_value = 1e16 if config['key_metric'] in NEG_METRICS else -1e16  # initialize with +inf or -inf depending on key metric
     metrics = []  # (for validation) list of lists: for each epoch, stores metrics like loss, ...
     best_metrics = {}
+    test_metrics = []
 
     # Evaluate on validation before training
     aggr_metrics_val, best_metrics, best_value = validate(val_evaluator, tensorboard_writer, config, best_metrics,
@@ -237,8 +235,13 @@ def main(config):
     metrics_names, metrics_values = zip(*aggr_metrics_val.items())
     metrics.append(list(metrics_values))
 
+    aggr_metrics_test, per_batch_test = test_evaluator.evaluate(epoch_num=0, keep_all=True, custom_title="test")
+    metrics_test_names, metrics_test_values = zip(*aggr_metrics_test.items())
+    test_metrics.append(list(metrics_test_values))
+
     logger.info('Starting training...')
     for epoch in tqdm(range(start_epoch + 1, config["epochs"] + 1), desc='Training Epoch', leave=False):
+        logger.info("--------------- Epoch number {}".format(epoch))
         mark = epoch if config['save_all'] else 'last'
         epoch_start_time = time.time()
         aggr_metrics_train = trainer.train_epoch(epoch)  # dictionary of aggregate epoch metrics
@@ -259,12 +262,21 @@ def main(config):
         logger.info("Avg sample train. time: {} seconds".format(avg_sample_time))
 
         # evaluate if first or last epoch or at specified interval
-        if (epoch == config["epochs"]) or (epoch == start_epoch + 1) or (epoch % config['val_interval'] == 0):
-            aggr_metrics_val, best_metrics, best_value = validate(val_evaluator, tensorboard_writer, config,
-                                                                  best_metrics, best_value, epoch)
-            metrics_names, metrics_values = zip(*aggr_metrics_val.items())
-            metrics.append(list(metrics_values))
+        # if (epoch == config["epochs"]) or (epoch == start_epoch + 1) or (epoch % config['val_interval'] == 0):
+        aggr_metrics_val, best_metrics, best_value = validate(val_evaluator, tensorboard_writer, config,
+                                                              best_metrics, best_value, epoch)
+        metrics_names, metrics_values = zip(*aggr_metrics_val.items())
+        metrics.append(list(metrics_values))
 
+        aggr_metrics_test, per_batch_test = test_evaluator.evaluate(epoch_num=epoch, keep_all=True, custom_title="test")
+        metrics_test_names, metrics_test_values = zip(*aggr_metrics_test.items())
+        test_metrics.append(list(metrics_test_values))
+
+        print_str = 'Test Summary: '
+        for k, v in aggr_metrics_test.items():
+            print_str += str(k) + ': ' + str(v) + ' | '
+        logger.info(print_str)
+        # return
         utils.save_model(os.path.join(config['save_dir'], 'model_{}.pth'.format(mark)), epoch, model, optimizer)
 
         # Learning rate scheduling
@@ -296,6 +308,14 @@ def main(config):
 
     total_runtime = time.time() - total_start_time
     logger.info("Total runtime: {} hours, {} minutes, {} seconds\n".format(*utils.readable_time(total_runtime)))
+
+    logger.info("Validation values")
+    logger.info(
+        "[" + ',\n'.join(["[" + ", ".join([str(value) for value in metric]) + "]" for metric in metrics]) + "]\n")
+
+    logger.info("Test values")
+    logger.info(
+        "[" + ',\n'.join(["[" + ", ".join([str(value) for value in metric]) + "]" for metric in test_metrics]) + "]\n")
 
     return best_value
 

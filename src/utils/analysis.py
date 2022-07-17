@@ -374,14 +374,6 @@ class Analyzer(object):
         hist_precision, binedges = np.histogram(precision, binedges)
         hist_recall, binedges = np.histogram(recall, binedges)
 
-        print("\n\nDistribution of classes with respect to PRECISION: ")
-        for b in range(len(binedges) - 1):
-            print("[{:.1f}, {:.1f}): {}".format(binedges[b], binedges[b + 1], hist_precision[b]))
-
-        print("\n\nDistribution of classes with respect to RECALL: ")
-        for b in range(len(binedges) - 1):
-            print("[{:.1f}, {:.1f}): {}".format(binedges[b], binedges[b + 1], hist_recall[b]))
-
         if self.plot:
             plt.figure()
             plt.subplot(121)

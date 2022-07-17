@@ -1,4 +1,13 @@
+LevelsWindTurbines/
+*.xls
+*.ts
+Emotiv/
+output/
+WindTurbinesSensors/
+SpokenArabicDigits/
+experiments/
 # Env and package
+venv/
 .env
 .vscode
 *.whl
