@@ -11,7 +11,7 @@ import pandas as pd
 from tqdm import tqdm
 # import sktime
 import sktime
-from sktime.utils.data_io import load_from_tsfile_to_dataframe
+from sktime.datasets import load_from_tsfile
 from datasets import utils
 
 logger = logging.getLogger('__main__')
@@ -362,18 +362,18 @@ class TSRegressionArchive(BaseData):
         # Every row of the returned df corresponds to a sample;
         # every column is a pd.Series indexed by timestamp and corresponds to a different dimension (feature)
         if self.config['task'] == 'regression':
-            df, labels = load_from_tsfile_to_dataframe(filepath)
+            df, labels = load_from_tsfile(filepath)
             labels_df = pd.DataFrame(labels, dtype=np.float32)
         elif self.config['task'] == 'classification':
-            df, labels = load_from_tsfile_to_dataframe(filepath)
+            df, labels = load_from_tsfile(filepath)
             labels = pd.Series(labels, dtype="category")
             self.class_names = labels.cat.categories
             labels_df = pd.DataFrame(labels.cat.codes, dtype=np.int8)  # int8-32 gives an error when using nn.CrossEntropyLoss
         else:  # e.g. imputation
             try:
-                df, labels = load_from_tsfile_to_dataframe(filepath)
+                df, labels = load_from_tsfile(filepath)
             except:
-                df, _ = load_from_tsfile_to_dataframe(filepath)
+                df, _ = load_from_tsfile(filepath)
             labels_df = None
 
         lengths = df.applymap(lambda x: len(x)).values  # (num_samples, num_dimensions) array containing the length of each series
